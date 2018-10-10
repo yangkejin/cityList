@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<title></title>
+		<script src="js/mui.min.js"></script>
+		<link href="css/mui.min.css" rel="stylesheet" />
+		<link href="css/mui.indexedlist.css" rel="stylesheet" />
+		<script src="js/ChineseToAlphabetTool.js" type="text/javascript" charset="utf-8"></script>
+		<script src="js/vue.min.js" type="text/javascript" charset="utf-8"></script>
+
+		<style type="text/css">
+			html,
+			body {
+				height: 100%;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+
+	<body>
+		<header class="mui-bar mui-bar-nav">
+			<a class="mui-action-back mui-icon mui-icon-left-nav mui-pull-left"></a>
+			<h1 class="mui-title">城市选择</h1>
+			<a id='done' class="mui-btn mui-btn-link mui-pull-right mui-btn-blue mui-disabled">完成</a>
+
+		</header>
+		<div class="mui-content">
+			<div id='list' class="mui-indexed-list">
+				<div class="mui-indexed-list-search mui-input-row mui-search" style="display: none;">
+					<input type="search" class="mui-input-clear mui-indexed-list-search-input" placeholder="搜索机场"></div>
+				<div class="mui-indexed-list-bar">
+					<a v-for="item in list">{{item.index}}</a>
+				</div>
+				<div class="mui-indexed-list-alert"></div>
+				<div class="mui-indexed-list-inner">
+					<div class="mui-indexed-list-empty-alert">没有数据</div>
+					<ul class="mui-table-view">
+						<div v-for="item in list">
+							<li :data-group="item.index" class="mui-table-view-divider mui-indexed-list-group">{{item.index}}</li>
+							<li v-for="city in item.citys" class="mui-table-view-cell mui-indexed-list-item mui-checkbox mui-left">
+								<input :id="city.Code" type="checkbox" :cityCode="city.Code"/>{{city.Name}}</li>
+						</div>
+					</ul> 
+				</div>
+			</div>
+		</div>
+
+		<script src="js/mui.indexedlist.js" type="text/javascript" charset="utf-8"></script>
+
+		<script type="text/javascript" charset="utf-8">
+			mui.init();
+			var app = new Vue({
+				el: "#list",
+				data: {
+					list: []
+				}
+			});
+			var _this = this;
+			mui.ready(function() {
+
+				var chineseToAlphabetTool = new ChineseToAlphabetTool();
+
+				var indexs = new Array();
+				var arr = new Array(); //[{index:"a",citys:[{Nmae:"广州市"}]}];
+
+				mui.getJSON('js/city.json', null, function(data) {
+					console.log(data);
+					for(var i = 0; i < data.length; i++) {
+						var shouZM = chineseToAlphabetTool.checkCh(data[i].Name);
+						if(indexs.indexOf(shouZM) < 0) {
+							indexs.push(shouZM);
+						}
+					}
+					indexs.sort();
+
+					for(var i = 0; i < indexs.length; i++) {
+						var index = indexs[i];
+						var citys = new Array();
+						for(var j = 0; j < data.length; j++) {
+							var shouZM = chineseToAlphabetTool.checkCh(data[j].Name);
+							if(index == shouZM) {
+								citys.push(data[j]);
+							}
+						}
+						arr.push({
+							"index": index,
+							"citys": citys
+						});
+					}
+					_this.app.list = arr;
+					console.log(arr);
+
+					Vue.nextTick(function() {
+						var header = document.querySelector('header.mui-bar'); 
+						var list = document.getElementById('list');
+						var done = document.getElementById('done');
+						
+						var input = document.getElementById("440100");
+						input.checked = true;
+						//calc hieght
+						list.style.height = (document.body.offsetHeight - header.offsetHeight) + 'px';
+						//create
+						window.indexedList = new mui.IndexedList(list);
+						//done event
+						done.addEventListener('tap', function() {
+							var checkboxArray = [].slice.call(list.querySelectorAll('input[type="checkbox"]'));
+							var checkedValues = [];
+							checkboxArray.forEach(function(box) {
+								if(box.checked) {
+									console.log(box.getAttribute("cityCode"));
+									checkedValues.push(box.parentNode.innerText);
+								}
+							});
+							if(checkedValues.length > 0) {
+								mui.alert('你选择了: ' + checkedValues);
+							} else {
+								mui.alert('你没选择任何机场');
+							}
+						}, false);
+						
+						mui('.mui-indexed-list-inner').on('change', 'input', function() {
+							var count = list.querySelectorAll('input[type="checkbox"]:checked').length;
+							var value = count ? "完成(" + count + ")" : "完成";
+							done.innerHTML = value;
+							if(count) {
+								if(done.classList.contains("mui-disabled")) {
+									done.classList.remove("mui-disabled");
+								}
+							} else {
+								if(!done.classList.contains("mui-disabled")) {
+									done.classList.add("mui-disabled");
+								}
+							}
+						});
+
+					});
+				})
+
+			});
+		</script>
+	</body>
+
+</html>
